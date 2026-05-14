@@ -1,6 +1,7 @@
 package http
 
 import (
+	"cloudlab/s3/internal/service"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -26,6 +27,11 @@ func CreateBucketHandler(w http.ResponseWriter, r *http.Request) {
 	if bucketName == "" {
 		http.Error(w, "bucket name required", http.StatusBadRequest)
 		return
+	} 
+
+	err := service.CreateBucket(bucketName) 
+	if err != nil { 
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
 	response := map[string]string{
