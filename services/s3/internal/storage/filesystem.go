@@ -26,3 +26,14 @@ func WriteObject(bucketName string, objectKey string, data io.Reader) error {
 	_, err = io.Copy(file, data)
 	return err
 }
+
+func ReadObject(bucketName, objectKey string) (io.ReadCloser, error) {
+	objectPath := filepath.Join(DataDir, bucketName, objectKey)
+
+	file, err := os.Open(objectPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return file, nil
+}

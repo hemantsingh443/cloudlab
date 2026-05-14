@@ -3,6 +3,7 @@ package http
 import (
 	"cloudlab/s3/internal/service"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -75,4 +76,48 @@ func UploadObjectHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
+}
+
+func GetObjectHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	path := strings.TrimPrefix(r.URL.Path, "/object/")
+	parts := strings.SplitN(path, "/", 2)
+
+	if len(parts) != 2 {
+		http.Error(w, "invalid object path", http.StatusBadRequest)
+		return
+	}
+
+	bucketName := parts[0]
+	objectKey := parts[1]
+
+	file, err := service.GetObject(bucketName, objectKey)
+	if err != nil {
+		http.Error(w, "object not found", http.StatusNotFound)
+		return
+	}
+	defer file.Close()
+
+	_, err = io.Copy(w, file)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func ObjectHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPut:
+		UploadObjectHandler(w, r)
+
+	case http.MethodGet:
+		GetObjectHandler(w, r)
+
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
 }

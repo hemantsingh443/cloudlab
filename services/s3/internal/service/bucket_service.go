@@ -12,3 +12,7 @@ func CreateBucket(bucketName string) error {
 func UploadObject(bucketName, objectKey string, data io.Reader) error {
 	return storage.WriteObject(bucketName, objectKey, data)
 }
+
+func GetObject(bucketName, objectKey string) (io.ReadCloser, error) {
+	return storage.ReadObject(bucketName, objectKey)
+}
