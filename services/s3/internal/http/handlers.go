@@ -27,10 +27,10 @@ func CreateBucketHandler(w http.ResponseWriter, r *http.Request) {
 	if bucketName == "" {
 		http.Error(w, "bucket name required", http.StatusBadRequest)
 		return
-	} 
+	}
 
-	err := service.CreateBucket(bucketName) 
-	if err != nil { 
+	err := service.CreateBucket(bucketName)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
@@ -42,4 +42,37 @@ func CreateBucketHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 
+}
+
+func UploadObjectHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	path := strings.TrimPrefix(r.URL.Path, "/object/")
+	parts := strings.SplitN(path, "/", 2)
+
+	if len(parts) != 2 {
+		http.Error(w, "invalid object path", http.StatusBadRequest)
+		return
+	}
+
+	bucketName := parts[0]
+	objectKey := parts[1]
+
+	err := service.UploadObject(bucketName, objectKey, r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]string{
+		"message": "object uploaded",
+		"bucket":  bucketName,
+		"object":  objectKey,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }

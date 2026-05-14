@@ -10,10 +10,10 @@ import (
 func main() {
 	router := httpHandlers.RegisterRoutes()
 
-	log.Println("S3 service starting at :8000")
+	log.Println("S3 service starting at :8080")
 
-	err := http.ListenAndServe(":8000", router)
-if err != nil {
+	err := http.ListenAndServe(":8080", router)
+	if err != nil {
 		log.Fatal("Error starting server: ", err)
 	}
 

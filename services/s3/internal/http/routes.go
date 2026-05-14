@@ -9,6 +9,7 @@ func RegisterRoutes() *http.ServeMux {
 
 	mux.HandleFunc("/health", HealthHandler)
 	mux.HandleFunc("/bucket/", CreateBucketHandler)
+	mux.HandleFunc("/object/", UploadObjectHandler)
 
 	return mux
 }
