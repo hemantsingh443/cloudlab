@@ -127,3 +127,34 @@ func ObjectHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
 }
+
+func ListBucketHandler(w http.ResponseWriter, r *http.Request) {
+	bucketName := strings.TrimPrefix(r.URL.Path, "/bucket/")
+
+	if bucketName == "" {
+		http.Error(w, "bucket name required", http.StatusBadRequest)
+		return
+	}
+
+	objects, err := service.ListBucketObjects(bucketName)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(objects)
+}
+
+func BucketHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPut:
+		CreateBucketHandler(w, r)
+
+	case http.MethodGet:
+		ListBucketHandler(w, r)
+
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}

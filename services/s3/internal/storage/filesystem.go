@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"cloudlab/s3/internal/models"
 	"encoding/json"
 	"io"
 	"os"
@@ -63,4 +64,40 @@ func WriteMetadata(metadata interface{}, bucketName, objectKey string) error {
 	defer file.Close()
 
 	return json.NewEncoder(file).Encode(metadata)
+}
+
+func ReadbucketMetadata(bucketName string) ([]models.ObjectMetadata, error){ 
+	metadataPath := filepath.Join(MetadataDir, bucketName) 
+
+	entries, err := os.ReadDir(metadataPath) 
+	if err != nil { 
+		return nil, err
+	} 
+
+	var objects []models.ObjectMetadata 
+
+	for _, entry := range entries { 
+		if entry.IsDir() { 
+			continue
+		}  
+		filePath := filepath.Join(metadataPath, entry.Name()) 
+
+		file, err := os.Open(filePath)  
+		if err != nil { 
+			continue
+		} 
+
+		var metadata models.ObjectMetadata 
+
+		err = json.NewDecoder(file).Decode(&metadata) 
+		file.Close() 
+
+		if err != nil { 
+			continue
+		} 
+		
+		objects = append(objects, metadata) 
+
+	} 
+	return objects, nil 
 }

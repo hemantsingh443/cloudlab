@@ -40,3 +40,7 @@ func UploadObject(bucketName, objectKey string, data io.Reader, contentType stri
 func GetObject(bucketName, objectKey string) (io.ReadCloser, error) {
 	return storage.ReadObject(bucketName, objectKey)
 }
+
+func ListBucketObjects(bucketName string) ([]models.ObjectMetadata, error) {
+	return storage.ReadbucketMetadata(bucketName)
+}
