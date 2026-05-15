@@ -7,5 +7,6 @@ type ObjectMetadata struct {
 	Key         string    `json:"key"`
 	Size        int64     `json:"size"`
 	ContentType string    `json:"content_type"`
+	Checksum    string    `json:"checksum"`
 	CreatedAt   time.Time `json:"created_at"`
 }
