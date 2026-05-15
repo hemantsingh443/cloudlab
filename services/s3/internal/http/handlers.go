@@ -62,7 +62,13 @@ func UploadObjectHandler(w http.ResponseWriter, r *http.Request) {
 	bucketName := parts[0]
 	objectKey := parts[1]
 
-	err := service.UploadObject(bucketName, objectKey, r.Body)
+	contentType := r.Header.Get("Content-Type")
+
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	err := service.UploadObject(bucketName, objectKey, r.Body, contentType, r.ContentLength)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

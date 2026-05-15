@@ -1,20 +1,31 @@
 package storage
 
 import (
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
 )
 
-const DataDir = "data"
+const (
+	DataDir     = "data"
+	BlobDir     = "data/blobs"
+	MetadataDir = "data/metadata"
+)
 
 func CreateBucket(bucketName string) error {
-	path := filepath.Join(DataDir, bucketName)
-	return os.MkdirAll(path, os.ModePerm)
+	blobpath := filepath.Join(BlobDir, bucketName)
+	metadataPath := filepath.Join(MetadataDir, bucketName)
+
+	err := os.MkdirAll(blobpath, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	return os.MkdirAll(metadataPath, os.ModePerm)
 }
 
 func WriteObject(bucketName string, objectKey string, data io.Reader) error {
-	objectPath := filepath.Join(DataDir, bucketName, objectKey)
+	objectPath := filepath.Join(BlobDir, bucketName, objectKey)
 
 	file, err := os.Create(objectPath)
 	if err != nil {
@@ -28,7 +39,7 @@ func WriteObject(bucketName string, objectKey string, data io.Reader) error {
 }
 
 func ReadObject(bucketName, objectKey string) (io.ReadCloser, error) {
-	objectPath := filepath.Join(DataDir, bucketName, objectKey)
+	objectPath := filepath.Join(BlobDir, bucketName, objectKey)
 
 	file, err := os.Open(objectPath)
 	if err != nil {
@@ -36,4 +47,20 @@ func ReadObject(bucketName, objectKey string) (io.ReadCloser, error) {
 	}
 
 	return file, nil
+}
+
+func WriteMetadata(metadata interface{}, bucketName, objectKey string) error {
+	path := filepath.Join(
+		MetadataDir,
+		bucketName,
+		objectKey+".json",
+	)
+
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return json.NewEncoder(file).Encode(metadata)
 }
