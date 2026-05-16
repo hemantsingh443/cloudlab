@@ -66,38 +66,64 @@ func WriteMetadata(metadata interface{}, bucketName, objectKey string) error {
 	return json.NewEncoder(file).Encode(metadata)
 }
 
-func ReadbucketMetadata(bucketName string) ([]models.ObjectMetadata, error){ 
-	metadataPath := filepath.Join(MetadataDir, bucketName) 
+func ReadbucketMetadata(bucketName string) ([]models.ObjectMetadata, error) {
+	metadataPath := filepath.Join(MetadataDir, bucketName)
 
-	entries, err := os.ReadDir(metadataPath) 
-	if err != nil { 
+	entries, err := os.ReadDir(metadataPath)
+	if err != nil {
 		return nil, err
-	} 
+	}
 
-	var objects []models.ObjectMetadata 
+	var objects []models.ObjectMetadata
 
-	for _, entry := range entries { 
-		if entry.IsDir() { 
+	for _, entry := range entries {
+		if entry.IsDir() {
 			continue
-		}  
-		filePath := filepath.Join(metadataPath, entry.Name()) 
+		}
+		filePath := filepath.Join(metadataPath, entry.Name())
 
-		file, err := os.Open(filePath)  
-		if err != nil { 
+		file, err := os.Open(filePath)
+		if err != nil {
 			continue
-		} 
+		}
 
-		var metadata models.ObjectMetadata 
+		var metadata models.ObjectMetadata
 
-		err = json.NewDecoder(file).Decode(&metadata) 
-		file.Close() 
+		err = json.NewDecoder(file).Decode(&metadata)
+		file.Close()
 
-		if err != nil { 
+		if err != nil {
 			continue
-		} 
-		
-		objects = append(objects, metadata) 
+		}
 
-	} 
-	return objects, nil 
+		objects = append(objects, metadata)
+
+	}
+	return objects, nil
+}
+//not atomic
+func DeleteObject(bucketName, objectKey string) error {
+	blobPath := filepath.Join(
+		BlobDir,
+		bucketName,
+		objectKey,
+	)
+
+	metadataPath := filepath.Join(
+		MetadataDir,
+		bucketName,
+		objectKey+".json",
+	)
+
+	err := os.Remove(blobPath)
+	if err != nil {
+		return err
+	}
+
+	err = os.Remove(metadataPath)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

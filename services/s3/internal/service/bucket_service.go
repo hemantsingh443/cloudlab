@@ -43,4 +43,8 @@ func GetObject(bucketName, objectKey string) (io.ReadCloser, error) {
 
 func ListBucketObjects(bucketName string) ([]models.ObjectMetadata, error) {
 	return storage.ReadbucketMetadata(bucketName)
+} 
+
+func DeleteObject(bucketName, objectKey string) error { 
+	return storage.DeleteObject(bucketName, objectKey)
 }

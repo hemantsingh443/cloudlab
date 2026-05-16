@@ -121,7 +121,10 @@ func ObjectHandler(w http.ResponseWriter, r *http.Request) {
 		UploadObjectHandler(w, r)
 
 	case http.MethodGet:
-		GetObjectHandler(w, r)
+		GetObjectHandler(w, r) 
+
+	case http.MethodDelete:  
+		DeleteObjectHandler(w,r)
 
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -157,4 +160,25 @@ func BucketHandler(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
+} 
+
+func DeleteObjectHandler(w http.ResponseWriter, r *http.Request) { 
+	path := strings.TrimPrefix(r.URL.Path, "/object/") 
+	parts := strings.SplitN(path, "/", 2) 
+ 
+	if len(parts) != 2 { 
+		http.Error(w, "invalid object path", http.StatusBadRequest) 
+		return
+	} 
+
+	bucketName := parts[0] 
+	objectKey := parts[1] 
+
+	err := service.DeleteObject(bucketName, objectKey) 
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError) 
+		return 
+	} 
+
+	w.WriteHeader(http.StatusNoContent)
 }
