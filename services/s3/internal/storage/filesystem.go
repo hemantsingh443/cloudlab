@@ -28,6 +28,11 @@ func CreateBucket(bucketName string) error {
 func WriteObject(bucketName string, objectKey string, data io.Reader) error {
 	objectPath := filepath.Join(BlobDir, bucketName, objectKey)
 
+	err := os.MkdirAll(filepath.Dir(objectPath), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
 	file, err := os.Create(objectPath)
 	if err != nil {
 		return err
@@ -57,6 +62,11 @@ func WriteMetadata(metadata interface{}, bucketName, objectKey string) error {
 		objectKey+".json",
 	)
 
+	err := os.MkdirAll(filepath.Dir(path), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
 	file, err := os.Create(path)
 	if err != nil {
 		return err
@@ -69,36 +79,39 @@ func WriteMetadata(metadata interface{}, bucketName, objectKey string) error {
 func ReadbucketMetadata(bucketName string) ([]models.ObjectMetadata, error) {
 	metadataPath := filepath.Join(MetadataDir, bucketName)
 
-	entries, err := os.ReadDir(metadataPath)
+	var objects []models.ObjectMetadata
+
+	err := filepath.WalkDir(metadataPath, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if filepath.Ext(path) != ".json" {
+			return nil
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			return nil
+		}
+		defer file.Close()
+
+		var metadata models.ObjectMetadata
+		if err := json.NewDecoder(file).Decode(&metadata); err == nil {
+			objects = append(objects, metadata)
+		}
+		return nil
+	})
+
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 
-	var objects []models.ObjectMetadata
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		filePath := filepath.Join(metadataPath, entry.Name())
-
-		file, err := os.Open(filePath)
-		if err != nil {
-			continue
-		}
-
-		var metadata models.ObjectMetadata
-
-		err = json.NewDecoder(file).Decode(&metadata)
-		file.Close()
-
-		if err != nil {
-			continue
-		}
-
-		objects = append(objects, metadata)
-
-	}
 	return objects, nil
 }
 //not atomic

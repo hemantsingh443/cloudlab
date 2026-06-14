@@ -8,8 +8,7 @@ func RegisterRoutes() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/health", HealthHandler)
-	mux.HandleFunc("/bucket/", BucketHandler)
-	mux.HandleFunc("/object/", ObjectHandler)
+	mux.HandleFunc("/", S3Handler)
 
 	return mux
 }

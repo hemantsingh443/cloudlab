@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"strings"
 )
 
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
@@ -17,22 +16,45 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func CreateBucketHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+func S3Handler(w http.ResponseWriter, r *http.Request) {
+	bucket, key, _ := resolveBucketAndKey(r)
 
-	bucketName := strings.TrimPrefix(r.URL.Path, "/bucket/")
-
-	if bucketName == "" {
+	if bucket == "" {
 		http.Error(w, "bucket name required", http.StatusBadRequest)
 		return
 	}
 
+	if key == "" {
+		// Bucket operations
+		switch r.Method {
+		case http.MethodPut:
+			CreateBucketHandler(w, r, bucket)
+		case http.MethodGet:
+			ListBucketHandler(w, r, bucket)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+		return
+	}
+
+	// Object operations
+	switch r.Method {
+	case http.MethodPut:
+		UploadObjectHandler(w, r, bucket, key)
+	case http.MethodGet:
+		GetObjectHandler(w, r, bucket, key)
+	case http.MethodDelete:
+		DeleteObjectHandler(w, r, bucket, key)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func CreateBucketHandler(w http.ResponseWriter, r *http.Request, bucketName string) {
 	err := service.CreateBucket(bucketName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	response := map[string]string{
@@ -42,28 +64,10 @@ func CreateBucketHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
-
 }
 
-func UploadObjectHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	path := strings.TrimPrefix(r.URL.Path, "/object/")
-	parts := strings.SplitN(path, "/", 2)
-
-	if len(parts) != 2 {
-		http.Error(w, "invalid object path", http.StatusBadRequest)
-		return
-	}
-
-	bucketName := parts[0]
-	objectKey := parts[1]
-
+func UploadObjectHandler(w http.ResponseWriter, r *http.Request, bucketName, objectKey string) {
 	contentType := r.Header.Get("Content-Type")
-
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
@@ -84,23 +88,7 @@ func UploadObjectHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func GetObjectHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	path := strings.TrimPrefix(r.URL.Path, "/object/")
-	parts := strings.SplitN(path, "/", 2)
-
-	if len(parts) != 2 {
-		http.Error(w, "invalid object path", http.StatusBadRequest)
-		return
-	}
-
-	bucketName := parts[0]
-	objectKey := parts[1]
-
+func GetObjectHandler(w http.ResponseWriter, r *http.Request, bucketName, objectKey string) {
 	file, err := service.GetObject(bucketName, objectKey)
 	if err != nil {
 		http.Error(w, "object not found", http.StatusNotFound)
@@ -115,30 +103,7 @@ func GetObjectHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func ObjectHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPut:
-		UploadObjectHandler(w, r)
-
-	case http.MethodGet:
-		GetObjectHandler(w, r) 
-
-	case http.MethodDelete:  
-		DeleteObjectHandler(w,r)
-
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func ListBucketHandler(w http.ResponseWriter, r *http.Request) {
-	bucketName := strings.TrimPrefix(r.URL.Path, "/bucket/")
-
-	if bucketName == "" {
-		http.Error(w, "bucket name required", http.StatusBadRequest)
-		return
-	}
-
+func ListBucketHandler(w http.ResponseWriter, r *http.Request, bucketName string) {
 	objects, err := service.ListBucketObjects(bucketName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -149,36 +114,12 @@ func ListBucketHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(objects)
 }
 
-func BucketHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPut:
-		CreateBucketHandler(w, r)
-
-	case http.MethodGet:
-		ListBucketHandler(w, r)
-
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-} 
-
-func DeleteObjectHandler(w http.ResponseWriter, r *http.Request) { 
-	path := strings.TrimPrefix(r.URL.Path, "/object/") 
-	parts := strings.SplitN(path, "/", 2) 
- 
-	if len(parts) != 2 { 
-		http.Error(w, "invalid object path", http.StatusBadRequest) 
-		return
-	} 
-
-	bucketName := parts[0] 
-	objectKey := parts[1] 
-
-	err := service.DeleteObject(bucketName, objectKey) 
+func DeleteObjectHandler(w http.ResponseWriter, r *http.Request, bucketName, objectKey string) {
+	err := service.DeleteObject(bucketName, objectKey)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError) 
-		return 
-	} 
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
